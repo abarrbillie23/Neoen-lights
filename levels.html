@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Levels</title>
+<style>
+body{
+background:#050816;
+font-family:Arial;
+margin:0;
+color:white;
+padding:20px;
+}
+
+h1{
+text-align:center;
+color:cyan;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:15px;
+margin-top:20px;
+}
+
+.level{
+background:rgba(255,255,255,.06);
+padding:30px;
+text-align:center;
+border-radius:20px;
+font-size:1.3rem;
+font-weight:bold;
+}
+
+a{
+text-decoration:none;
+color:white;
+}
+</style>
+</head>
+<body>
+
+<h1>SELECT LEVEL</h1>
+
+<div class="grid">
+<a href="game.html?level=1"><div class="level">LEVEL 1</div></a>
+<a href="game.html?level=2"><div class="level">LEVEL 2</div></a>
+<a href="game.html?level=3"><div class="level">LEVEL 3</div></a>
+<a href="game.html?level=4"><div class="level">LEVEL 4</div></a>
+<a href="game.html?level=5"><div class="level">LEVEL 5</div></a>
+</div>
+
+</body>
+</html>

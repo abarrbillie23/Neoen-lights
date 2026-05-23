@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>Neon Survival</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{
+box-sizing:border-box;
+font-family:Arial;
+}
+
+body{
+margin:0;
+background:#050816;
+color:white;
+padding:15px;
+overflow:hidden;
+transition:.08s;
+}
+
+.stats{
+display:grid;
+grid-template-columns:repeat(5,1fr);
+gap:10px;
+margin-bottom:15px;
+}
+
+.card{
+background:rgba(255,255,255,.05);
+padding:10px;
+border-radius:15px;
+text-align:center;
+}
+
+.game{
+height:450px;
+background:rgba(255,255,255,.05);
+border-radius:20px;
+position:relative;
+overflow:hidden;
+}
+
+.good,
+.bad{
+position:absolute;
+border-radius:50%;
+}
+
+.good{
+width:65px;
+height:65px;
+background:cyan;
+box-shadow:0 0 25px cyan;
+animation:pulse 1s infinite;
+}
+
+.bad{
+width:55px;
+height:55px;
+background:red;
+box-shadow:0 0 20px red;
+}
+
+@keyframes pulse{
+0%{transform:scale(1);}
+50%{transform:scale(1.08);}
+100%{transform:scale(1);}
+}
+
+.player{
+background:rgba(255,255,255,.05);
+padding:10px;
+border-radius:12px;
+margin-top:8px;
+display:flex;
+justify-content:space-between;
+}
+
+button{
+width:100%;
+padding:15px;
+border:none;
+border-radius:15px;
+margin-top:15px;
+background:linear-gradient(90deg,#00ffff,#0066ff);
+color:white;
+font-weight:bold;
+font-size:1rem;
+}
+
+.comboFlash{
+animation:flash .2s;
+}
+
+@keyframes flash{
+0%{transform:scale(1);}
+50%{transform:scale(1.08);}
+100%{transform:scale(1);}
+}
+</style>
+</head>
+<body>
+
+<div class="stats">
+<div class="card"><small>Score</small><h2 id="score">0</h2></div>
+<div class="card"><small>Time</small><h2 id="time">60</h2></div>
+<div class="card"><small>Combo</small><h2 id="combo">1x</h2></div>
+<div class="card"><small>Coins</small><h2 id="coins">0</h2></div>
+<div class="card"><small>Level</small><h2 id="levelText">1</h2></div>
+</div>
+
+<div class="game" id="game"></div>
+
+<button onclick="startGame()">START GAME</button>
+
+<h3>Leaderboard</h3>
+<div id="leaderboard"></div>
+
+<script>
+
+const SUPABASE_URL='https://tvtqqunspmuhnryqvede.supabase.co';
+const SUPABASE_KEY='sb_publishable_3oBwyPZzFTCAlIB3VnxPog_yF11FAru';
+
+const client=supabase.createClient(
+SUPABASE_URL,
+SUPABASE_KEY
+);
+
+const params=new URLSearchParams(window.location.search);
+const level=parseInt(params.get('level'))||1;
+
+document.getElementById('levelText').innerText=level;
+
+const settings={
+1:{obstacles:1,time:60,penalty:5,speed:1400},
+2:{obstacles:2,time:58,penalty:8,speed:1200},
+3:{obstacles:3,time:55,penalty:10,speed:1000},
+4:{obstacles:4,time:50,penalty:14,speed:850},
+5:{obstacles:5,time:45,penalty:18,speed:700}
+};
+
+const current=settings[level];
+
+let score=0;
+let combo=1;
+let coins=0;
+let time=current.time;
+let timer;
+let playing=false;
+
+const game=document.getElementById('game');
+
+function random(min,max){
+return Math.floor(Math.random()*(max-min)+min);
+}
+
+function vibrate(ms){
+if(navigator.vibrate){
+navigator.vibrate(ms);
+}
+}
+
+function shake(){
+
+document.body.style.transform='translateX(6px)';
+
+setTimeout(()=>{
+document.body.style.transform='translateX(-6px)';
+},40);
+
+setTimeout(()=>{
+document.body.style.transform='translateX(0px)';
+},80);
+
+}
+
+function update(){
+
+document.getElementById('score').innerText=score;
+document.getElementById('combo').innerText=combo+'x';
+document.getElementById('coins').innerText=coins;
+document.getElementById('time').innerText=time;
+
+}
+
+function moveOrb(el){
+
+el.style.left=random(0,320)+'px';
+el.style.top=random(0,360)+'px';
+
+}
+
+function createGood(){
+
+const orb=document.createElement('div');
+orb.className='good';
+
+moveOrb(orb);
+
+orb.onclick=(e)=>{
+
+e.stopPropagation();
+
+if(!playing)return;
+
+combo++;
+
+score+=(10*combo);
+coins+=(2*combo);
+
+update();
+
+moveOrb(orb);
+
+vibrate(25);
+
+orb.classList.add('comboFlash');
+
+setTimeout(()=>{
+orb.classList.remove('comboFlash');
+},150);
+
+};
+
+setInterval(()=>{
+moveOrb(orb);
+},current.speed);
+
+game.appendChild(orb);
+
+}
+
+function createBad(){
+
+const bad=document.createElement('div');
+bad.className='bad';
+
+moveOrb(bad);
+
+let dx=random(2,5);
+let dy=random(2,5);
+
+setInterval(()=>{
+
+let x=parseInt(bad.style.left||0);
+let y=parseInt(bad.style.top||0);
+
+if(x>320||x<0)dx=-dx;
+if(y>380||y<0)dy=-dy;
+
+bad.style.left=(x+dx)+'px';
+bad.style.top=(y+dy)+'px';
+
+},30);
+
+bad.onclick=(e)=>{
+
+e.stopPropagation();
+
+if(!playing)return;
+
+combo=1;
+
+score-=current.penalty*2;
+
+if(score<0)score=0;
+
+update();
+
+vibrate([120,50,120]);
+
+shake();
+
+};
+
+game.appendChild(bad);
+
+}
+
+function startGame(){
+
+playing=true;
+
+score=0;
+combo=1;
+coins=0;
+time=current.time;
+
+update();
+
+game.innerHTML='';
+
+createGood();
+
+for(let i=0;i<current.obstacles;i++){
+createBad();
+}
+
+clearInterval(timer);
+
+game.onclick=(e)=>{
+
+if(
+e.target.className!=='good' &&
+e.target.className!=='bad'
+){
+
+combo=1;
+
+score-=3;
+
+if(score<0)score=0;
+
+update();
+
+vibrate(80);
+
+}
+
+};
+
+timer=setInterval(()=>{
+
+time--;
+
+update();
+
+if(time<=0){
+endGame();
+}
+
+},1000);
+
+}
+
+async function endGame(){
+
+playing=false;
+
+clearInterval(timer);
+
+vibrate([300,100,300]);
+
+alert('Game Over! Score: '+score);
+
+const {
+data:{user}
+}=await client.auth.getUser();
+
+await client
+.from('scores')
+.insert([
+{
+user_id:user.id,
+email:user.email,
+score:score,
+level:level,
+coins:coins
+}
+]);
+
+loadLeaderboard();
+
+}
+
+async function loadLeaderboard(){
+
+const {data}=await client
+.from('scores')
+.select('*')
+.eq('level',level)
+.order('score',{ascending:false})
+.limit(10);
+
+const board=document.getElementById('leaderboard');
+
+board.innerHTML='';
+
+data.forEach(player=>{
+
+const div=document.createElement('div');
+
+div.className='player';
+
+div.innerHTML=`
+<span>${player.email}</span>
+<strong>${player.score}</strong>
+`;
+
+board.appendChild(div);
+
+});
+
+}
+
+loadLeaderboard();
+
+</script>
+
+</body>
+</html>
